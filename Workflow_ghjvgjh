@@ -17,15 +17,56 @@ jobs:
     - name: Проверка репозитория
       uses: actions/checkout@v3
       
-    - name: Скачивание и обработка конфигов
+    - name: Скачивание свежих конфигов
       run: |
+        echo "Скачиваем исходный файл..."
+        # Скачиваем и сразу берем первые 20 строк, перезаписывая старый файл
         curl -s "https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt" | head -n 20 > vpn_configs.txt
         
-        echo "Сохранено $(wc -l < vpn_configs.txt) конфигов"
+        # Показываем результат
+        echo "✅ Сохранено $(wc -l < vpn_configs.txt) свежих конфигов"
+        echo "📋 Первые 3 конфига:"
+        head -n 3 vpn_configs.txt
+        echo "..."
     
-    - name: Коммит и пуш изменений
+    - name: Проверка изменений
+      id: check_changes
+      run: |
+        # Проверяем, есть ли изменения в файле
+        if git diff --quiet vpn_configs.txt; then
+          echo "📊 Конфиги не изменились"
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "🆕 Конфиги обновились!"
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Создание коммита (только если есть изменения)
+      if: steps.check_changes.outputs.changed == 'true'
       run: |
         git config --global user.name 'GitHub Action'
         git config --global user.email 'action@github.com'
+        
+        # Добавляем файл в коммит
         git add vpn_configs.txt
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Автообновление конфигов $(date '+%Y-%m-%d %H:%M')" && git push)
+        
+        # Создаем коммит с датой
+        git commit -m "🔄 Обновление VPN конфигов - $(date '+%Y-%m-%d %H:%M')"
+        
+        # Отправляем изменения
+        git push
+        
+        echo "✅ Изменения отправлены в репозиторий"
+    
+    - name: Информация о выполненном задании
+      run: |
+        echo "════════════════════════════════════════"
+        echo "🚀 Работа завершена"
+        echo "⏰ Время: $(date)"
+        echo "📁 Файл: vpn_configs.txt"
+        if [[ "${{ steps.check_changes.outputs.changed }}" == "true" ]]; then
+          echo "📊 Статус: Файл обновлен"
+        else
+          echo "📊 Статус: Изменений нет"
+        fi
+        echo "════════════════════════════════════════"
