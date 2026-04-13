@@ -1,0 +1,25 @@
+name: Sync VPN Config
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # каждый час
+  workflow_dispatch:       # ручной запуск
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download config from source
+        run: |
+          curl -s -o 2idhwdh7h72d7hd2gb4th3g42grt4hht4hg2re1ftj453h3teds2g2d7v \
+          https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+          git add .
+          git diff --staged --quiet || (git commit -m "Auto-update config" && git push)
