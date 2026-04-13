@@ -1,25 +1,45 @@
-name: Sync VPN Config
+name: 🔄 Sync VPN Config (5 min)
 
 on:
   schedule:
-    - cron: '0 * * * *'   # каждый час
-  workflow_dispatch:       # ручной запуск
+    - cron: '*/5 * * * *'   # каждые 5 минут
+  workflow_dispatch:
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: 📥 Checkout репозитория
         uses: actions/checkout@v4
 
-      - name: Download config from source
+      - name: 🔧 Обновление конфига с сохранением заголовков
         run: |
-          curl -s -o 2idhwdh7h72d7hd2gb4th3g42grt4hht4hg2re1ftj453h3teds2g2d7v \
-          https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt
+          SOURCE_URL="https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt"
+          TARGET_FILE="2idhwdh7h72d7hd2gb4th3g42grt4hht4hg2re1ftj453h3teds2g2d7v"
+          TEMP_SOURCE="/tmp/source.txt"
 
-      - name: Commit if changed
+          # 1. Скачиваем исходный файл
+          curl -s -o "$TEMP_SOURCE" "$SOURCE_URL"
+
+          # 2. Формируем итоговый файл
+          {
+            # Вставляем фиксированные заголовки
+            echo "#profile-title: fazZzeta vpn"
+            echo "# profile-update-interval: 5"
+            echo "# Date/Time: 2026-03-16 / 20:00 (Moscow)"
+            echo "# Количество: 150"
+            # Добавляем всё, начиная с 5-й строки из скачанного файла
+            tail -n +5 "$TEMP_SOURCE"
+          } > "$TARGET_FILE"
+
+      - name: 📝 Коммит при изменениях
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "actions@github.com"
-          git add .
-          git diff --staged --quiet || (git commit -m "Auto-update config" && git push)
+          git add "$TARGET_FILE"
+          if git diff --staged --quiet; then
+            echo "✅ Нет изменений."
+          else
+            git commit -m "🔄 Обновление ключей"
+            git push
+          fi
